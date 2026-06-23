@@ -1,0 +1,23 @@
+{
+  "id": "agent-delta",
+  "spiffe_id": "spiffe://example.org/dev/agent-delta",
+  "environment": "development",
+  "trust_tier": "foundation",
+  "description": "Agent at end of long delegation chain",
+  "credential": {
+    "type": "jwt",
+    "dynamic": true,
+    "is_static": false,
+    "rotation_max_age_hours": 24
+  },
+  "delegation": {
+    "chain": [
+      {"agent_id": "orchestrator-root", "scopes": ["file_read", "db_query", "api_call"], "delegated_at": "2026-06-22T10:00:00Z"},
+      {"agent_id": "planner-agent", "scopes": ["file_read", "db_query"], "delegated_at": "2026-06-22T10:00:01Z"},
+      {"agent_id": "sub-planner", "scopes": ["db_query"], "delegated_at": "2026-06-22T10:00:02Z"},
+      {"agent_id": "worker-agent", "scopes": ["db_query"], "delegated_at": "2026-06-22T10:00:03Z"},
+      {"agent_id": "agent-delta", "scopes": ["db_query"], "delegated_at": "2026-06-22T10:00:04Z"}
+    ],
+    "max_depth": 3
+  }
+}

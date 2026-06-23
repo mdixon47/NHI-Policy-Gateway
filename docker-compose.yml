@@ -1,0 +1,47 @@
+services:
+  opa:
+    image: openpolicyagent/opa:latest
+    ports:
+      - "8181:8181"
+    command:
+      - "run"
+      - "--server"
+      - "--addr=0.0.0.0:8181"
+      - "--log-level=info"
+      - "/policies"
+    volumes:
+      - ./policies:/policies:ro
+    healthcheck:
+      test: ["CMD", "/opa", "eval", "true"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  gateway:
+    build: ./gateway
+    ports:
+      - "3000:3000"
+    environment:
+      - OPA_URL=http://opa:8181
+      - TOOL_SERVER_URL=http://mock-tools:3001
+      - LOG_LEVEL=info
+      - AGENTS_DIR=/app/demo/agents
+    volumes:
+      - ./demo:/app/demo:ro
+    depends_on:
+      opa:
+        condition: service_healthy
+
+  mock-tools:
+    build: ./mock-tools
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "5173:5173"
+    depends_on:
+      - gateway

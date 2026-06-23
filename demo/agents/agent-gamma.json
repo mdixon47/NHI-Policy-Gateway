@@ -1,0 +1,19 @@
+{
+  "id": "agent-gamma",
+  "spiffe_id": "spiffe://example.org/prod/agent-gamma",
+  "environment": "production",
+  "trust_tier": "enterprise",
+  "description": "Full-access orchestrator with expired credentials",
+  "credential": {
+    "type": "jwt",
+    "issued_at": "2026-06-18T08:00:00Z",
+    "expires_at": "2026-06-18T10:00:00Z",
+    "is_static": false,
+    "last_rotated": "2026-06-18T07:45:00Z",
+    "rotation_max_age_hours": 24
+  },
+  "delegation": {
+    "chain": [],
+    "max_depth": 3
+  }
+}

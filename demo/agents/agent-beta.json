@@ -1,0 +1,17 @@
+{
+  "id": "agent-beta",
+  "spiffe_id": "spiffe://example.org/dev/agent-beta",
+  "environment": "development",
+  "trust_tier": "foundation",
+  "description": "Limited development test agent (file_read only)",
+  "credential": {
+    "type": "jwt",
+    "dynamic": true,
+    "is_static": false,
+    "rotation_max_age_hours": 24
+  },
+  "delegation": {
+    "chain": [],
+    "max_depth": 3
+  }
+}

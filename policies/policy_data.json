@@ -1,0 +1,38 @@
+{
+  "policy_data": {
+    "tool_permissions": {
+      "agent-alpha": {
+        "allowed_tools": ["file_read", "db_query"],
+        "description": "Production data analyst agent"
+      },
+      "agent-beta": {
+        "allowed_tools": ["file_read"],
+        "description": "Development test agent"
+      },
+      "agent-gamma": {
+        "allowed_tools": ["file_read", "db_query", "api_call"],
+        "description": "Full-access orchestrator (expired creds scenario)"
+      },
+      "agent-delta": {
+        "allowed_tools": ["db_query"],
+        "description": "Deeply delegated sub-agent"
+      }
+    },
+    "environment_map": {
+      "agent-alpha": ["production"],
+      "agent-beta": ["development"],
+      "agent-gamma": ["production"],
+      "agent-delta": ["development", "production"]
+    },
+    "credential_rules": {
+      "max_ttl_hours": 1,
+      "rotation_max_age_hours": 24,
+      "allow_static_secrets": false,
+      "allowed_credential_types": ["jwt", "oauth_token", "svid"]
+    },
+    "delegation_limits": {
+      "max_depth": 3,
+      "allow_scope_escalation": false
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "id": "agent-alpha",
+  "spiffe_id": "spiffe://example.org/prod/agent-alpha",
+  "environment": "production",
+  "trust_tier": "enterprise",
+  "description": "Compliant production data analyst agent",
+  "credential": {
+    "type": "jwt",
+    "dynamic": true,
+    "is_static": false,
+    "rotation_max_age_hours": 24
+  },
+  "delegation": {
+    "chain": [
+      {
+        "agent_id": "orchestrator-1",
+        "scopes": ["file_read", "db_query"],
+        "delegated_at": "2026-06-22T10:00:00Z"
+      },
+      {
+        "agent_id": "agent-alpha",
+        "scopes": ["file_read"],
+        "delegated_at": "2026-06-22T10:00:05Z"
+      }
+    ],
+    "max_depth": 3
+  }
+}
