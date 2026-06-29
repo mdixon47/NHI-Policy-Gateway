@@ -8,12 +8,42 @@ test_allow_valid_credential if {
 		"credential": {
 			"type": "jwt",
 			"issued_at": "2099-01-01T00:00:00Z",
-			"expires_at": "2099-12-31T23:59:59Z",
+			"expires_at": "2099-01-01T00:30:00Z",
 			"is_static": false,
 			"last_rotated": "2099-01-01T00:00:00Z",
 			"rotation_max_age_hours": 24,
 		},
 	}
+}
+
+test_deny_disallowed_credential_type if {
+	reasons := credential_lifecycle.denial_reasons with input as {
+		"credential": {
+			"type": "api_key",
+			"issued_at": "2099-01-01T00:00:00Z",
+			"expires_at": "2099-01-01T00:30:00Z",
+			"is_static": false,
+			"last_rotated": "2099-01-01T00:00:00Z",
+			"rotation_max_age_hours": 24,
+		},
+	}
+	some reason in reasons
+	reason.violation == "DISALLOWED_CREDENTIAL_TYPE"
+}
+
+test_deny_excessive_ttl if {
+	reasons := credential_lifecycle.denial_reasons with input as {
+		"credential": {
+			"type": "jwt",
+			"issued_at": "2099-01-01T00:00:00Z",
+			"expires_at": "2099-01-01T05:00:00Z",
+			"is_static": false,
+			"last_rotated": "2099-01-01T00:00:00Z",
+			"rotation_max_age_hours": 24,
+		},
+	}
+	some reason in reasons
+	reason.violation == "EXCESSIVE_TTL"
 }
 
 test_deny_expired_credential if {

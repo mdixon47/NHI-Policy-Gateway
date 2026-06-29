@@ -1,6 +1,6 @@
 services:
   opa:
-    image: openpolicyagent/opa:latest
+    image: openpolicyagent/opa:1.17.1
     ports:
       - "8181:8181"
     command:

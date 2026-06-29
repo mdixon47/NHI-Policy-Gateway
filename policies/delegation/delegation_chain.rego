@@ -40,7 +40,7 @@ denial_reasons contains reason if {
 		"policy": "delegation_chain",
 		"violation": "PRIVILEGE_ESCALATION",
 		"message": "An agent in the delegation chain acquired scopes not held by its delegator",
-		"owasp_asi": "ASI03",
+		"owasp_asi": "ASI08",
 		"owasp_nhi": "NHI9",
 		"zero_trust_tier": "Enterprise",
 	}

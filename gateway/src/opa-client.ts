@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { PolicyInput, PolicyDecision, DenialReason } from './types';
 import { config } from './config';
+import { outboundHttpsAgent } from './tls';
 
 export async function evaluatePolicy(input: PolicyInput): Promise<PolicyDecision> {
   const policies = [
@@ -10,36 +11,17 @@ export async function evaluatePolicy(input: PolicyInput): Promise<PolicyDecision
     'nhi.environment_isolation',
   ];
 
+  const results = await Promise.all(
+    policies.map((policy) => evaluateSinglePolicy(policy, input))
+  );
+
   const allDenials: DenialReason[] = [];
   let allAllowed = true;
 
-  for (const policy of policies) {
-    try {
-      const allowRes = await axios.post(
-        `${config.opaUrl}/v1/data/${policy.replace(/\./g, '/')}/allow`,
-        { input }
-      );
-      const allowed = allowRes.data.result ?? false;
-
-      if (!allowed) {
-        allAllowed = false;
-        const denyRes = await axios.post(
-          `${config.opaUrl}/v1/data/${policy.replace(/\./g, '/')}/denial_reasons`,
-          { input }
-        );
-        const reasons: DenialReason[] = denyRes.data.result ?? [];
-        allDenials.push(...reasons);
-      }
-    } catch {
+  for (const result of results) {
+    if (!result.allowed) {
       allAllowed = false;
-      allDenials.push({
-        policy: policy,
-        violation: 'POLICY_ENGINE_UNAVAILABLE',
-        message: `Failed to evaluate ${policy}: OPA unreachable`,
-        owasp_asi: 'N/A',
-        owasp_nhi: 'N/A',
-        zero_trust_tier: 'Foundation',
-      });
+      allDenials.push(...result.denials);
     }
   }
 
@@ -47,4 +29,45 @@ export async function evaluatePolicy(input: PolicyInput): Promise<PolicyDecision
     allow: allAllowed,
     denial_reasons: allDenials,
   };
+}
+
+async function evaluateSinglePolicy(
+  policy: string,
+  input: PolicyInput
+): Promise<{ allowed: boolean; denials: DenialReason[] }> {
+  const basePath = `${config.opaUrl}/v1/data/${policy.replace(/\./g, '/')}`;
+
+  try {
+    const allowRes = await axios.post(
+      `${basePath}/allow`,
+      { input },
+      { timeout: config.opaTimeoutMs, httpsAgent: outboundHttpsAgent }
+    );
+    const allowed = allowRes.data.result ?? false;
+
+    if (allowed) {
+      return { allowed: true, denials: [] };
+    }
+
+    const denyRes = await axios.post(
+      `${basePath}/denial_reasons`,
+      { input },
+      { timeout: config.opaTimeoutMs, httpsAgent: outboundHttpsAgent }
+    );
+    return { allowed: false, denials: denyRes.data.result ?? [] };
+  } catch {
+    return {
+      allowed: false,
+      denials: [
+        {
+          policy: policy,
+          violation: 'POLICY_ENGINE_UNAVAILABLE',
+          message: `Failed to evaluate ${policy}: OPA unreachable`,
+          owasp_asi: 'N/A',
+          owasp_nhi: 'N/A',
+          zero_trust_tier: 'Foundation',
+        },
+      ],
+    };
+  }
 }

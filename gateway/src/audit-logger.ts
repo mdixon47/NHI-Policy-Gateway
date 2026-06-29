@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
 import { AuditEntry, DenialReason } from './types';
 import { config } from './config';
+import { persistAuditEntry } from './audit-sink';
 
 const logger = winston.createLogger({
   level: config.logLevel,
@@ -37,7 +38,11 @@ export function logDecision(params: {
   };
 
   auditLog.push(entry);
+  if (auditLog.length > config.auditRetention) {
+    auditLog.splice(0, auditLog.length - config.auditRetention);
+  }
   logger.info('Policy decision', { audit: entry });
+  persistAuditEntry(entry).catch((err) => logger.error('Audit sink write failed', { err: String(err) }));
 
   return entry;
 }

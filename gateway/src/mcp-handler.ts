@@ -4,6 +4,8 @@ import { PolicyInput, AgentIdentity, CredentialInfo, DelegationContext, ToolCall
 import { evaluatePolicy } from './opa-client';
 import { logDecision, broadcastAuditEntry } from './audit-logger';
 import { config } from './config';
+import { authenticate, AuthError } from './auth';
+import { outboundHttpsAgent } from './tls';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -57,6 +59,16 @@ function extractCredential(req: Request): CredentialInfo {
   };
 }
 
+// The delegation depth limit is authoritative and set by the gateway. A
+// client- or profile-supplied value may only tighten it, never raise it above
+// the centrally configured cap.
+export function effectiveMaxDepth(requested?: number): number {
+  if (typeof requested === 'number' && requested >= 0) {
+    return Math.min(requested, config.delegationMaxDepth);
+  }
+  return config.delegationMaxDepth;
+}
+
 function extractDelegation(req: Request): DelegationContext {
   const body = req.body as Record<string, unknown>;
   const delegationChain = body.delegation_chain as Array<Record<string, unknown>> | undefined;
@@ -68,7 +80,7 @@ function extractDelegation(req: Request): DelegationContext {
         scopes: hop.scopes as string[],
         delegated_at: (hop.delegated_at as string) || new Date().toISOString(),
       })),
-      max_depth: 3,
+      max_depth: effectiveMaxDepth(),
     };
   }
 
@@ -83,11 +95,11 @@ function extractDelegation(req: Request): DelegationContext {
         scopes: hop.scopes as string[],
         delegated_at: (hop.delegated_at as string) || new Date().toISOString(),
       })),
-      max_depth: (profileDelegation.max_depth as number) ?? 3,
+      max_depth: effectiveMaxDepth(profileDelegation.max_depth as number | undefined),
     };
   }
 
-  return { chain: [], max_depth: 3 };
+  return { chain: [], max_depth: effectiveMaxDepth() };
 }
 
 function extractToolRequest(req: Request): ToolCallRequest {
@@ -106,8 +118,32 @@ function extractToolRequest(req: Request): ToolCallRequest {
 export async function handleToolCall(req: Request, res: Response): Promise<void> {
   const startTime = Date.now();
 
-  const agent = extractAgentIdentity(req);
-  const credential = extractCredential(req);
+  let agent: AgentIdentity;
+  let credential: CredentialInfo;
+  try {
+    const authCtx = await authenticate(req);
+    agent = authCtx ? authCtx.agent : extractAgentIdentity(req);
+    credential = authCtx ? authCtx.credential : extractCredential(req);
+  } catch (err) {
+    if (err instanceof AuthError) {
+      res.status(401).json({
+        status: 'DENIED',
+        violations: [
+          {
+            policy: 'authentication',
+            violation: err.code,
+            message: err.message,
+            owasp_asi: 'ASI03',
+            owasp_nhi: 'NHI4',
+            zero_trust_tier: 'Foundation',
+          },
+        ],
+      });
+      return;
+    }
+    throw err;
+  }
+
   const delegation = extractDelegation(req);
   const request = extractToolRequest(req);
 
@@ -131,7 +167,8 @@ export async function handleToolCall(req: Request, res: Response): Promise<void>
     try {
       const toolResponse = await axios.post(
         `${config.toolServerUrl}/tools/${request.tool}`,
-        request.parameters
+        request.parameters,
+        { timeout: config.toolTimeoutMs, httpsAgent: outboundHttpsAgent }
       );
       res.json({
         status: 'ALLOWED',
@@ -141,11 +178,11 @@ export async function handleToolCall(req: Request, res: Response): Promise<void>
         audit_id: auditEntry.id,
       });
     } catch {
-      res.json({
-        status: 'ALLOWED',
+      res.status(502).json({
+        status: 'ALLOWED_UPSTREAM_ERROR',
         tool: request.tool,
         agent: agent.id,
-        result: { message: `Tool '${request.tool}' executed successfully (mock server unavailable)` },
+        error: `Request was authorized but tool '${request.tool}' could not be reached`,
         audit_id: auditEntry.id,
       });
     }
