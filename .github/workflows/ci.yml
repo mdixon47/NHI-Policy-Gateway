@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gateway:
+    name: Gateway (build & test)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: gateway
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: gateway/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npm test
+
+  mock-tools:
+    name: Mock tools (build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mock-tools
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: mock-tools/package-lock.json
+      - run: npm ci
+      - run: npm run build
+
+  dashboard:
+    name: Dashboard (lint & build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  policies:
+    name: OPA policies (check & test)
+    runs-on: ubuntu-latest
+    env:
+      OPA_VERSION: 1.17.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install OPA ${{ env.OPA_VERSION }}
+        run: |
+          curl -fsSL -o opa \
+            "https://openpolicyagent.org/downloads/v${OPA_VERSION}/opa_linux_amd64_static"
+          chmod +x opa
+          sudo mv opa /usr/local/bin/opa
+          opa version
+      - name: Lint policies
+        run: opa check policies/
+      - name: Run policy tests
+        run: opa test policies/ tests/ -v

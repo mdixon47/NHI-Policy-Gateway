@@ -1,6 +1,12 @@
 # NHI Policy Gateway
 
+[![CI](https://github.com/mdixon47/NHI-Policy-Gateway/actions/workflows/ci.yml/badge.svg)](https://github.com/mdixon47/NHI-Policy-Gateway/actions/workflows/ci.yml)
+[![Security](https://github.com/mdixon47/NHI-Policy-Gateway/actions/workflows/security.yml/badge.svg)](https://github.com/mdixon47/NHI-Policy-Gateway/actions/workflows/security.yml)
+[![CodeQL](https://github.com/mdixon47/NHI-Policy-Gateway/actions/workflows/codeql.yml/badge.svg)](https://github.com/mdixon47/NHI-Policy-Gateway/actions/workflows/codeql.yml)
+
 MCP Policy Gateway enforcing Non-Human Identity governance with OPA/Rego. Maps to OWASP Agentic AI Top 10 and NHI Top 10.
+
+📚 **Documentation:** [Security review findings](docs/issue.md) · [Hardening changes](docs/update.md) · [DevSecOps pipeline](docs/devsecops.md)
 
 An enforcement layer for NHI governance in agentic systems. Every AI agent that wants to invoke a tool goes through this gateway. The gateway consults OPA — running Rego policies — and makes four checks before allowing execution.
 

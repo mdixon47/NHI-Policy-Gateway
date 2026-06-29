@@ -1,0 +1,68 @@
+version: 2
+updates:
+  # Gateway (Node/TypeScript)
+  - package-ecosystem: npm
+    directory: /gateway
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - gateway
+    groups:
+      gateway-minor-patch:
+        update-types:
+          - minor
+          - patch
+
+  # Mock tool servers (Node/TypeScript)
+  - package-ecosystem: npm
+    directory: /mock-tools
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - mock-tools
+
+  # Dashboard (Vite/React)
+  - package-ecosystem: npm
+    directory: /dashboard
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - dashboard
+
+  # GitHub Actions used by the workflows themselves
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - ci
+
+  # Base images referenced by Dockerfiles
+  - package-ecosystem: docker
+    directory: /gateway
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+  - package-ecosystem: docker
+    directory: /mock-tools
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
+  - package-ecosystem: docker
+    directory: /dashboard
+    schedule:
+      interval: weekly
+    labels:
+      - dependencies
+      - docker
